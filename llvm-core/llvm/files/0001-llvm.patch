@@ -1,0 +1,39 @@
+--- a/llvm/cmake/modules/CrossCompile.cmake	2026-07-04 15:50:26.390890967 +0300
++++ b/llvm/cmake/modules/CrossCompile.cmake	2026-07-04 19:22:44.354480190 +0300
+@@ -1,7 +1,6 @@
+ include(AddLLVM)
+ include(LLVMExternalProjectUtils)
+ 
+-
+ function(llvm_create_cross_target project_name target_name toolchain buildtype)
+ 
+   if(NOT DEFINED ${project_name}_${target_name}_BUILD)
+@@ -29,6 +28,7 @@
+       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+       )
+   endif()
++ 
+   set(CROSS_TOOLCHAIN_FLAGS_${target_name} ${CROSS_TOOLCHAIN_FLAGS_INIT}
+     CACHE STRING "Toolchain configuration for ${target_name}")
+ 
+@@ -46,7 +46,10 @@
+     # Propagate LLVM_EXTERNAL_CLANG_SOURCE_DIR so that clang-tblgen can be built
+     set(external_clang_dir "-DLLVM_EXTERNAL_CLANG_SOURCE_DIR=${LLVM_EXTERNAL_CLANG_SOURCE_DIR}")
+   endif()
+-
++  if (LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR)
++    set(external_clang_tools_extra_dir
++      "-DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR=${LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR}")
++  endif()
+   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}
+     COMMAND ${CMAKE_COMMAND} -E make_directory ${${project_name}_${target_name}_BUILD}
+     COMMENT "Creating ${${project_name}_${target_name}_BUILD}...")
+@@ -104,7 +107,7 @@
+         -DLLVM_INCLUDE_TESTS=OFF
+         -DLLVM_TABLEGEN_FLAGS="${llvm_tablegen_flags}"
+         -DPYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}"
+-        ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
++        ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags} ${external_clang_tools_extra_dir}
+         ${ARGN}
+     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}
+     DEPENDS CREATE_${project_name}_${target_name}
