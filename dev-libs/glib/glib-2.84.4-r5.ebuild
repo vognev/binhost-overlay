@@ -5,7 +5,7 @@ EAPI=8
 PYTHON_REQ_USE="xml(+)"
 PYTHON_COMPAT=( python3_{11..14} )
 
-inherit dot-a eapi9-ver gnome.org gnome2-utils linux-info meson-multilib multilib python-any-r1 toolchain-funcs xdg
+inherit dot-a eapi9-ver gnome.org gnome2-utils linux-info meson-multilib multilib python-any-r1 toolchain-funcs xdg gobject-introspection
 
 DESCRIPTION="The GLib library of C routines"
 HOMEPAGE="https://www.gtk.org/"
@@ -302,6 +302,7 @@ multilib_src_configure() {
 		if  tc-is-cross-compiler ; then
 			# Build a native copy of gobject-introspection first to be able to run  tools
 			INTROSPECTION_BIN_DIR="${INTROSPECTION_CBUILD_PREFIX}/usr/bin"
+
 			(
 				unset CC CXX LD AS AR STRIP OBJCOPY RANLIB
 				unset CFLAGS CXXFLAGS LDFLAGS
@@ -322,6 +323,32 @@ multilib_src_configure() {
 		meson_src_install --destdir ""
 
 		popd || die
+
+		if tc-is-cross-compiler ; then
+			local g_ir_scanner_path=$(gi_wrap_ir_scanner "${INTROSPECTION_CBUILD_PREFIX}/usr/bin")
+			local g_ir_compiler_path=$(gi_wrap_ir_compiler "${INTROSPECTION_CBUILD_PREFIX}/usr/bin")
+			local g_ir_generate_path=$(gi_wrap_ir_generate "${INTROSPECTION_CBUILD_PREFIX}/usr/bin")
+
+			# INTROSPECTION_LIB_DIR was built with $(get_libdir), but the standalone
+			# introspection bootstrap project doesn't always honor that and can still
+			# install into a plain lib/ dir; fall back to it explicitly and die with
+			# a clear message rather than letting sed silently no-op on a missing file.
+			local cross_pc="${INTROSPECTION_LIB_DIR}/pkgconfig/gobject-introspection-1.0.pc"
+			if [ ! -f "${cross_pc}" ] ; then
+				cross_pc="${INTROSPECTION_CHOST_PREFIX}/usr/lib/pkgconfig/gobject-introspection-1.0.pc"
+			fi
+			[ -f "${cross_pc}" ] || die "gobject-introspection-1.0.pc not found under ${INTROSPECTION_CHOST_PREFIX}"
+
+			sed -i \
+				-e "s|g_ir_scanner=.*|g_ir_scanner=${g_ir_scanner_path}|g" \
+				-e "s|g_ir_compiler=.*|g_ir_compiler=${g_ir_compiler_path}|g" \
+				-e "s|g_ir_generate=.*|g_ir_generate=${g_ir_generate_path}|g" \
+				"${cross_pc}"
+
+			export G_IR_SCANNER="${g_ir_scanner_path}"
+			export G_IR_COMPILER="${g_ir_compiler_path}"
+			export G_IR_GENERATE="${g_ir_generate_path}"
+		fi
 
 		EMESON_SOURCE=${ORIG_SOURCE_DIR}
 		BUILD_DIR=${ORIG_BUILD_DIR}
@@ -358,108 +385,6 @@ multilib_src_configure() {
 
 	# TODO: Can this be cleaned up now we have -Dglib_debug? (bug #946485)
 	use debug && EMESON_BUILD_TYPE=debug
-
-	if tc-is-cross-compiler; then
-		mkdir -p "${T}/bin"
-
-		install -m0755 /dev/stdin "${T}/bin/fake-ldd" <<-EOF
-			#!/bin/sh
-
-			if [ "\$1" = "--version" ]; then
-				echo "ldd (Gentoo musl smart-fake-ldd via llvm-readelf)"
-				exit 0
-			fi
-			
-			SO_NAMES=\$(llvm-readelf -d "\$@" | grep NEEDED | sed -r 's/.*\[(.*)\].*/\1/')
-			
-			for so in \${SO_NAMES}; do
-				FOUND_PATH=""
-				
-				if [ -n "\${WORKDIR}" ]; then
-					FOUND_PATH=\$(find "\${WORKDIR}" -name "\${so}" -print -quit 2>/dev/null)
-				fi
-				
-				if [ -z "\${FOUND_PATH}" -a -n "\${SYSROOT}" ]; then
-					FOUND_PATH=\$(find "\${SYSROOT}/usr/lib64" "\${SYSROOT}/lib64" "\${SYSROOT}/usr/lib" "\${SYSROOT}/lib" -name "\${so}" -print -quit 2>/dev/null)
-				fi
-				
-				if [ -n "\${FOUND_PATH}" ]; then
-					echo "\${so} => \${FOUND_PATH} (0x00007ffff7f00000)"
-				else
-					echo "\${so} => not found"
-				fi
-			done
-		EOF
-
-		mv "${INTROSPECTION_BIN_DIR}/g-ir-scanner" "${INTROSPECTION_BIN_DIR}/g-ir-scanner.orig"
-
-		# Capture the CTARGET toolchain that was already resolved for this build
-		# (via toolchain-funcs) instead of hardcoding a specific clang version and
-		# config path. This keeps the wrapper working for any CTARGET/toolchain
-		# combination, not just x86_64-pc-linux-musl with clang-22.
-		local scanner_cc scanner_cxx scanner_cpp
-		scanner_cc=$(tc-getCC)
-		scanner_cxx=$(tc-getCXX)
-		scanner_cpp=$(tc-getCPP)
-
-		install -m0755 /dev/stdin "${INTROSPECTION_BIN_DIR}/g-ir-scanner" <<-EOF
-			#!/bin/sh
-			unset LD_LIBRARY_PATH
-
-			NATIVE_ROOT=\$(dirname "\$(dirname "\$0")")
-			export PYTHONPATH="\${NATIVE_ROOT}/$(get_libdir)/gobject-introspection"
-
-			export CC="${scanner_cc}"
-			export CXX="${scanner_cxx}"
-			export CPP="${scanner_cpp}"
-
-			exec "\${NATIVE_ROOT}/bin/g-ir-scanner.orig" --use-ldd-wrapper="${T}/bin/fake-ldd" --use-binary-wrapper="${T}/sysroot-run-prefixed" \$@
-		EOF
-
-		mv "${INTROSPECTION_BIN_DIR}/g-ir-compiler" "${INTROSPECTION_BIN_DIR}/g-ir-compiler.orig"
-
-		install -m0755 /dev/stdin "${INTROSPECTION_BIN_DIR}/g-ir-compiler" <<-'EOF'
-			#!/bin/sh
-			unset LD_LIBRARY_PATH
-
-			NATIVE_ROOT=$(dirname "$(dirname "$0")")
-			export PYTHONPATH="${NATIVE_ROOT}/$(get_libdir)/gobject-introspection"
-
-			exec "${NATIVE_ROOT}/bin/g-ir-compiler.orig" "$@"
-		EOF
-
-		mv "${INTROSPECTION_BIN_DIR}/g-ir-generate" "${INTROSPECTION_BIN_DIR}/g-ir-generate.orig"
-		install -m0755 /dev/stdin "${INTROSPECTION_BIN_DIR}/g-ir-generate" <<-'EOF'
-			#!/bin/sh
-			unset LD_LIBRARY_PATH
-
-			NATIVE_ROOT=$(dirname "$(dirname "$0")")
-			export PYTHONPATH="${NATIVE_ROOT}/$(get_libdir)/gobject-introspection"
-
-			exec "${NATIVE_ROOT}/bin/g-ir-generate.orig" "$@"
-		EOF
-
-		# INTROSPECTION_LIB_DIR was built with $(get_libdir), but the standalone
-		# introspection bootstrap project doesn't always honor that and can still
-		# install into a plain lib/ dir; fall back to it explicitly and die with
-		# a clear message rather than letting sed silently no-op on a missing file.
-		local cross_pc="${INTROSPECTION_LIB_DIR}/pkgconfig/gobject-introspection-1.0.pc"
-		if [ ! -f "${cross_pc}" ] ; then
-			cross_pc="${INTROSPECTION_CHOST_PREFIX}/usr/lib/pkgconfig/gobject-introspection-1.0.pc"
-		fi
-		[ -f "${cross_pc}" ] || die "gobject-introspection-1.0.pc not found under ${INTROSPECTION_CHOST_PREFIX}"
-
-		sed -i \
-			-e "s|g_ir_scanner=.*|g_ir_scanner=${INTROSPECTION_BIN_DIR}/g-ir-scanner|g" \
-			-e "s|g_ir_compiler=.*|g_ir_compiler=${INTROSPECTION_BIN_DIR}/g-ir-compiler|g" \
-			-e "s|g_ir_generate=.*|g_ir_generate=${INTROSPECTION_BIN_DIR}/g-ir-generate|g" \
-			"${cross_pc}"
-
-		export G_IR_SCANNER="${INTROSPECTION_BIN_DIR}/g-ir-scanner"
-		export G_IR_COMPILER="${INTROSPECTION_BIN_DIR}/g-ir-compiler"
-		export G_IR_GENERATE="${INTROSPECTION_BIN_DIR}/g-ir-generate"
-
-	fi # tc-is-cross-compiler
 
 	local emesonargs=(
 		--localstatedir="${EPREFIX}"/var
