@@ -194,7 +194,38 @@ sysroot_make_run_prefixed() {
 		# arguments to cover both explicit and implicit QEMU usage.
 		install -m0755 /dev/stdin "${SCRIPT}" <<-EOF || die
 			#!/bin/sh
-			QEMU_SET_ENV="\${QEMU_SET_ENV}\${QEMU_SET_ENV+,}LD_LIBRARY_PATH=\${LD_LIBRARY_PATH}\${LD_LIBRARY_PATH+:}${LIBGCC}" QEMU_LD_PREFIX="${MYROOT}" exec $(type -P "qemu-${QEMU_ARCH}") "\${@}"
+
+			NEW_LP=""
+
+			push_new_lp() {
+			    if [ -z "\${NEW_LP}" ]; then 
+			        NEW_LP="\${1}"; 
+			    else 
+			        NEW_LP="\${NEW_LP}:\${1}"; 
+			    fi
+			}
+
+			OLD_IFS="\${IFS}"; IFS=':' 
+			for path in \${LD_LIBRARY_PATH}; do
+			    case "\${path}" in
+			        ${MYROOT}/usr/lib64|${MYROOT}/lib64|${MYROOT}/usr/lib|${MYROOT}/lib)
+			            # prevent duplication of sysroot paths in LD_LIBRARY_PATH
+			            ;;
+			        /usr/lib64*|/lib64|*/usr/lib*|/lib*)
+			            # prevent leakage of host paths into sysroot LD_LIBRARY_PATH
+			            ;;
+			        *)
+			            push_new_lp "\${path}"
+			            ;;
+			    esac
+			done
+			IFS="\${OLD_IFS}"
+
+			LD_LIBRARY_PATH="\${NEW_LP}:${MYROOT}/usr/lib64:${MYROOT}/lib64:${MYROOT}/usr/lib:${MYROOT}/lib"
+
+			QEMU_SET_ENV="\${QEMU_SET_ENV}\${QEMU_SET_ENV+,}LD_LIBRARY_PATH=\${LD_LIBRARY_PATH}\${LD_LIBRARY_PATH+:}${LIBGCC}" \\
+			    QEMU_LD_PREFIX="${MYROOT}" \\
+			    exec $(type -P "qemu-${QEMU_ARCH}") "\${@}"
 		EOF
 
 		# Meson will fail if the given exe_wrapper does not work, regardless of

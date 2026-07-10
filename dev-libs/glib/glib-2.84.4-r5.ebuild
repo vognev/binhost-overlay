@@ -362,31 +362,6 @@ multilib_src_configure() {
 	if tc-is-cross-compiler; then
 		mkdir -p "${T}/bin"
 
-		install -m0755 /dev/stdin "${T}/bin/clean-qemu-run" <<-EOF
-			#!/bin/sh
-
-			# Keep only LD_LIBRARY_PATH entries that point into this build's own
-			# tree (the just-compiled target libglib etc.) or into the CTARGET
-			# libc; everything else is host-side cruft that would confuse a
-			# qemu-user emulated target binary. Matched against the current
-			# BUILD_DIR rather than a hardcoded "glib-\${PV}" string so this
-			# keeps working across version bumps without editing the ebuild.
-			NEW_LP=""
-			IFS=':'
-			for path in \${LD_LIBRARY_PATH}; do
-				case "\${path}" in
-					${BUILD_DIR}*|*musl*)
-						if [ -z "\${NEW_LP}" ]; then NEW_LP="\${path}"; else NEW_LP="\${NEW_LP}:\${path}"; fi
-						;;
-				esac
-			done
-			unset IFS
-		
-			export LD_LIBRARY_PATH="\${NEW_LP}:${SYSROOT}/usr/lib64:${SYSROOT}/lib64:${SYSROOT}/usr/lib:${SYSROOT}/lib"
-
-			exec "${T}/sysroot-run-prefixed" "\$@"
-		EOF
-
 		install -m0755 /dev/stdin "${T}/bin/fake-ldd" <<-EOF
 			#!/bin/sh
 
@@ -438,7 +413,7 @@ multilib_src_configure() {
 			export CXX="${scanner_cxx}"
 			export CPP="${scanner_cpp}"
 
-			exec "\${NATIVE_ROOT}/bin/g-ir-scanner.orig" --use-ldd-wrapper="${T}/bin/fake-ldd" --use-binary-wrapper="${T}/bin/clean-qemu-run" \$@
+			exec "\${NATIVE_ROOT}/bin/g-ir-scanner.orig" --use-ldd-wrapper="${T}/bin/fake-ldd" --use-binary-wrapper="${T}/sysroot-run-prefixed" \$@
 		EOF
 
 		mv "${INTROSPECTION_BIN_DIR}/g-ir-compiler" "${INTROSPECTION_BIN_DIR}/g-ir-compiler.orig"
@@ -518,9 +493,6 @@ multilib_src_configure() {
 	fi
 
 	meson_src_configure
-	if tc-is-cross-compiler; then
-		sed -i "s|exe_wrapper = '.*'|exe_wrapper = '${T}/bin/clean-qemu-run'|g" "${T}/meson.x86_64-pc-linux-musl.amd64.ini"
-	fi
 }
 
 multilib_src_test() {
