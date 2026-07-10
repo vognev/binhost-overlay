@@ -29,7 +29,7 @@ gi_cross_fake_ldd() {
 		        FOUND_PATH=\$(find "\${WORKDIR}" -name "\${so}" -print -quit 2>/dev/null)
 		    fi
 
-		    if [ -z "\${FOUND_PATH}" -a -n "\${SYSROOT}" ]; then
+		    if [ -z "\${FOUND_PATH}" ] && [ -n "\${SYSROOT}" ]; then
 		        FOUND_PATH=\$(find "\${SYSROOT}/usr/lib64" "\${SYSROOT}/lib64" "\${SYSROOT}/usr/lib" "\${SYSROOT}/lib" -name "\${so}" -print -quit 2>/dev/null)
 		    fi
 
@@ -45,71 +45,65 @@ EOF
 }
 
 gi_wrap_ir_scanner() {
-    local INTROSPECTION_BIN_DIR="${1}"
+    local g_ir_scanner="${1}"
 
-    if [ -f "${INTROSPECTION_BIN_DIR}/g-ir-scanner.orig" ]; then
-        echo "${INTROSPECTION_BIN_DIR}/g-ir-scanner"
+	mkdir -p "${T}/bin"
+
+    if [ -f "${T}/bin/g-ir-scanner" ]; then
+        echo "${T}/bin/g-ir-scanner"
         return 0
     fi
 
-    mv "${INTROSPECTION_BIN_DIR}/g-ir-scanner" "${INTROSPECTION_BIN_DIR}/g-ir-scanner.orig"
-
-    install -m0755 /dev/stdin "${INTROSPECTION_BIN_DIR}/g-ir-scanner" <<-EOF
+    install -m0755 /dev/stdin "${T}/bin/g-ir-scanner" <<-EOF
 		#!/bin/sh
 		unset LD_LIBRARY_PATH
-
-		export PYTHONPATH="${INTROSPECTION_BIN_DIR}/../../$(get_libdir)/gobject-introspection"
 
 		export CC=$(tc-getCC)
 		export CXX=$(tc-getCXX)
 		export CPP=$(tc-getCPP)
 
-		exec "${INTROSPECTION_BIN_DIR}/g-ir-scanner.orig" --use-ldd-wrapper="$(gi_cross_fake_ldd)" --use-binary-wrapper="$(sysroot_make_run_prefixed)" \$@
+		exec "${g_ir_scanner}" --use-ldd-wrapper="$(gi_cross_fake_ldd)" --use-binary-wrapper="$(sysroot_make_run_prefixed)" "\$@"
 EOF
 
-    echo "${INTROSPECTION_BIN_DIR}/g-ir-scanner"
+    echo "${T}/bin/g-ir-scanner"
 }
 
 gi_wrap_ir_compiler() {
-    local INTROSPECTION_BIN_DIR="${1}"
+	local g_ir_compiler="${1}"
 
-    if [ -f "${INTROSPECTION_BIN_DIR}/g-ir-compiler.orig" ]; then
-        echo "${INTROSPECTION_BIN_DIR}/g-ir-compiler"
+	mkdir -p "${T}/bin"
+
+    if [ -f "${T}/bin/g-ir-compiler" ]; then
+        echo "${T}/bin/g-ir-compiler"
         return 0
     fi
 
-    mv "${INTROSPECTION_BIN_DIR}/g-ir-compiler" "${INTROSPECTION_BIN_DIR}/g-ir-compiler.orig"
-
-    install -m0755 /dev/stdin "${INTROSPECTION_BIN_DIR}/g-ir-compiler" <<-EOF
+    install -m0755 /dev/stdin "${T}/bin/g-ir-compiler" <<-EOF
 		#!/bin/sh
 		unset LD_LIBRARY_PATH
 
-		export PYTHONPATH="${INTROSPECTION_BIN_DIR}/../../$(get_libdir)/gobject-introspection"
-
-		exec "${INTROSPECTION_BIN_DIR}/g-ir-compiler.orig" "$@"
+		exec "${g_ir_compiler}" "$@"
 EOF
 
-    echo "${INTROSPECTION_BIN_DIR}/g-ir-compiler"
+    echo "${T}/bin/g-ir-compiler"
 }
 
 gi_wrap_ir_generate() {
-    local INTROSPECTION_BIN_DIR="${1}"
+    local g_ir_generate="${1}"
 
-    if [ -f "${INTROSPECTION_BIN_DIR}/g-ir-generate.orig" ]; then
-        echo "${INTROSPECTION_BIN_DIR}/g-ir-generate"
+	mkdir -p "${T}/bin"
+
+    if [ -f "${T}/bin/g-ir-generate" ]; then
+        echo "${T}/bin/g-ir-generate"
         return 0
     fi
 
-    mv "${INTROSPECTION_BIN_DIR}/g-ir-generate" "${INTROSPECTION_BIN_DIR}/g-ir-generate.orig"
-
-    install -m0755 /dev/stdin "${INTROSPECTION_BIN_DIR}/g-ir-generate" <<-EOF
+    install -m0755 /dev/stdin "${T}/bin/g-ir-generate" <<-EOF
 		#!/bin/sh
 		unset LD_LIBRARY_PATH
 
-		export PYTHONPATH="${INTROSPECTION_BIN_DIR}/../../$(get_libdir)/gobject-introspection"
-
-		exec "${INTROSPECTION_BIN_DIR}/g-ir-generate.orig" "$@"
+		exec "${g_ir_generate}" "$@"
 EOF
 
-    echo "${INTROSPECTION_BIN_DIR}/g-ir-generate"
+    echo "${T}/bin/g-ir-generate"
 }

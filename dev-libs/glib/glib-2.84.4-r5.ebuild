@@ -250,17 +250,14 @@ multilib_src_configure() {
 
 	# Build internal copy of gobject-introspection to avoid circular dependency (built for native abi only)
 	if _need_bootstrap_gi ; then
-		einfo "Bootstrapping gobject-introspection..."
-
 		INTROSPECTION_CBUILD_PREFIX="${WORKDIR}/bootstrap-gi-cbuild"
 		INTROSPECTION_CHOST_PREFIX="${WORKDIR}/bootstrap-gi-chost"
 
-		INTROSPECTION_BIN_DIR="${INTROSPECTION_CHOST_PREFIX}/usr/bin"
 		INTROSPECTION_LIB_DIR="${INTROSPECTION_CHOST_PREFIX}/usr/$(get_libdir)"
 
 		local emesonargs=(
 			-Dpython="${EPYTHON}"
-			-Dbuild_introspection_data=false
+			-Dbuild_introspection_data=true
 			# Build an internal copy of glib for the internal copy of gobject-introspection
 			--force-fallback-for=glib
 			# Make the paths in pkgconfig files relative as we used to not
@@ -300,8 +297,7 @@ multilib_src_configure() {
 		pushd ${INTROSPECTION_SOURCE_DIR} || die
 
 		if  tc-is-cross-compiler ; then
-			# Build a native copy of gobject-introspection first to be able to run  tools
-			INTROSPECTION_BIN_DIR="${INTROSPECTION_CBUILD_PREFIX}/usr/bin"
+			einfo "Building gobject-introspection native tools"
 
 			(
 				unset CC CXX LD AS AR STRIP OBJCOPY RANLIB
@@ -311,13 +307,24 @@ multilib_src_configure() {
 				export CC="${HOSTCC}"
 				export CXX="${HOSTCXX}"
 
-				meson_src_configure --prefix="${INTROSPECTION_CBUILD_PREFIX}/usr"
+				meson_src_configure --prefix="${INTROSPECTION_CBUILD_PREFIX}/usr" -Dbuild_introspection_data=false
 				meson_src_compile
 				meson_src_install --destdir ""
 				rm -rf "${BUILD_DIR}"
 			)
+
+			local  g_ir_scanner_path=$(gi_wrap_ir_scanner  "${INTROSPECTION_CBUILD_PREFIX}/usr/bin/g-ir-scanner")
+			local g_ir_compiler_path=$(gi_wrap_ir_compiler "${INTROSPECTION_CBUILD_PREFIX}/usr/bin/g-ir-compiler")
+			local g_ir_generate_path=$(gi_wrap_ir_generate "${INTROSPECTION_CBUILD_PREFIX}/usr/bin/g-ir-generate")
+
+			export PATH="${T}/bin:${PATH}"
+
+			emesonargs+=(
+				-Dgi_cross_use_prebuilt_gi=true
+			)
 		fi
 
+		einfo "Bootstrapping gobject-introspection..."
 		meson_src_configure --prefix="${INTROSPECTION_CHOST_PREFIX}/usr"
 		meson_src_compile
 		meson_src_install --destdir ""
@@ -325,10 +332,6 @@ multilib_src_configure() {
 		popd || die
 
 		if tc-is-cross-compiler ; then
-			local g_ir_scanner_path=$(gi_wrap_ir_scanner "${INTROSPECTION_CBUILD_PREFIX}/usr/bin")
-			local g_ir_compiler_path=$(gi_wrap_ir_compiler "${INTROSPECTION_CBUILD_PREFIX}/usr/bin")
-			local g_ir_generate_path=$(gi_wrap_ir_generate "${INTROSPECTION_CBUILD_PREFIX}/usr/bin")
-
 			# INTROSPECTION_LIB_DIR was built with $(get_libdir), but the standalone
 			# introspection bootstrap project doesn't always honor that and can still
 			# install into a plain lib/ dir; fall back to it explicitly and die with
@@ -343,18 +346,12 @@ multilib_src_configure() {
 				-e "s|g_ir_scanner=.*|g_ir_scanner=${g_ir_scanner_path}|g" \
 				-e "s|g_ir_compiler=.*|g_ir_compiler=${g_ir_compiler_path}|g" \
 				-e "s|g_ir_generate=.*|g_ir_generate=${g_ir_generate_path}|g" \
-				"${cross_pc}"
-
-			export G_IR_SCANNER="${g_ir_scanner_path}"
-			export G_IR_COMPILER="${g_ir_compiler_path}"
-			export G_IR_GENERATE="${g_ir_generate_path}"
+				"${cross_pc}" \
+				|| die "Failed to patch gobject-introspection-1.0.pc with wrapped g-ir-* paths"
 		fi
 
 		EMESON_SOURCE=${ORIG_SOURCE_DIR}
 		BUILD_DIR=${ORIG_BUILD_DIR}
-
-		# Add gobject-introspection binaries and pkgconfig files to path
-		export PATH="${INTROSPECTION_BIN_DIR}:${PATH}"
 
 		# Override primary pkgconfig search paths to prioritize our internal copy.
 		# Also include the real CTARGET pkgconfig dirs (both libdir and noarch

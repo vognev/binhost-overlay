@@ -50,7 +50,6 @@ qemu_arch_if_needed() {
 	local qemu_arch=$(qemu_arch "${target}")
 
 	if [[ ${MERGE_TYPE} != binary && ${CHOST} != "${CBUILD}" ]]; then
-		einfo ">>> binhost: force using qemu-${qemu_arch} for sysroot_run_prefixed"
 		echo "${qemu_arch}"
                 return 0
         fi
@@ -222,6 +221,8 @@ sysroot_make_run_prefixed() {
 			IFS="\${OLD_IFS}"
 
 			LD_LIBRARY_PATH="\${NEW_LP}:${MYROOT}/usr/lib64:${MYROOT}/lib64:${MYROOT}/usr/lib:${MYROOT}/lib"
+
+			einfo "qemu-wrapper: \${@}"
 
 			QEMU_SET_ENV="\${QEMU_SET_ENV}\${QEMU_SET_ENV+,}LD_LIBRARY_PATH=\${LD_LIBRARY_PATH}\${LD_LIBRARY_PATH+:}${LIBGCC}" \\
 			    QEMU_LD_PREFIX="${MYROOT}" \\
