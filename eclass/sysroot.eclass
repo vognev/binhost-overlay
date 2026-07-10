@@ -222,8 +222,6 @@ sysroot_make_run_prefixed() {
 
 			LD_LIBRARY_PATH="\${NEW_LP}:${MYROOT}/usr/lib64:${MYROOT}/lib64:${MYROOT}/usr/lib:${MYROOT}/lib"
 
-			einfo "qemu-wrapper: \${@}"
-
 			QEMU_SET_ENV="\${QEMU_SET_ENV}\${QEMU_SET_ENV+,}LD_LIBRARY_PATH=\${LD_LIBRARY_PATH}\${LD_LIBRARY_PATH+:}${LIBGCC}" \\
 			    QEMU_LD_PREFIX="${MYROOT}" \\
 			    exec $(type -P "qemu-${QEMU_ARCH}") "\${@}"
