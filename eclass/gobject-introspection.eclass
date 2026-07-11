@@ -62,9 +62,12 @@ gi_wrap_ir_scanner() {
 
 		export CC=$(tc-getCC)
 		export CXX=$(tc-getCXX)
-		export CPP=$(tc-getCPP)
+		unset CPP # not wrapped by cross-wrappers
 
-		exec "${g_ir_scanner}" --use-ldd-wrapper="$(gi_cross_fake_ldd)" --use-binary-wrapper="$(sysroot_make_run_prefixed)" "\$@"
+		exec "${g_ir_scanner}" --use-ldd-wrapper="$(gi_cross_fake_ldd)" \
+		    --use-binary-wrapper="$(sysroot_make_run_prefixed)" \
+			--add-include-path="${ESYSROOT}/usr/share/gir-1.0" \
+			"\$@"
 EOF
 
     echo "${T}/shims/g-ir-scanner"
@@ -84,7 +87,7 @@ gi_wrap_ir_compiler() {
 		#!/bin/sh
 		unset LD_LIBRARY_PATH
 
-		exec "${g_ir_compiler}" "\$@"
+		exec "${g_ir_compiler}" --includedir="${ESYSROOT}/usr/share/gir-1.0" "\$@"
 EOF
 
     echo "${T}/shims/g-ir-compiler"

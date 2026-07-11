@@ -1,0 +1,37 @@
+#!/bin/bash
+
+if [[ -z "$1" ]]; then
+    echo "Error: specify a glob for searching. For example: $0 gui-libs/*"
+    exit 1
+fi
+
+for item in "$@"; do
+    if [[ -d "${item}" ]]; then
+        ebuilds=( "${item}"/*.ebuild )
+    elif [[ -f "${item}" && "${item}" == *.ebuild ]]; then
+        ebuilds=( "${item}" )
+    else
+        continue
+    fi
+
+    for my_ebuild in "${ebuilds[@]}"; do
+        [[ -f "${my_ebuild}" ]] || continue
+
+        rel_path=$(echo "${my_ebuild}" | sed 's|^./||')
+        gentoo_ebuild="/var/db/repos/gentoo/${rel_path}"
+        
+        if [[ -f "${gentoo_ebuild}" ]]; then
+            diff_output=$(diff --color=always -u "${gentoo_ebuild}" "${my_ebuild}")
+            if [[ -n "${diff_output}" ]]; then
+                echo -e "\n\e[1;31m=== Changes in: ${rel_path} ===\e[0m"
+                if command -v colordiff &> /dev/null; then
+                    echo "${diff_output}" | colordiff
+                else
+                    echo "${diff_output}"
+                fi
+            fi
+        else
+            echo -e "\n\e[1;33m--- ${rel_path} is only in this overlay ---\e[0m"
+        fi
+    done
+done

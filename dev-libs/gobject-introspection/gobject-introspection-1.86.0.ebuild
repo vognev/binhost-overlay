@@ -5,7 +5,7 @@ EAPI=8
 
 PYTHON_COMPAT=( python3_{11..14} )
 PYTHON_REQ_USE="xml(+)"
-inherit gnome.org meson-multilib python-single-r1 xdg sysroot gobject-introspection
+inherit gnome.org meson-multilib python-single-r1 xdg gobject-introspection
 
 DESCRIPTION="Introspection system for GObject-based libraries"
 HOMEPAGE="https://gi.readthedocs.io/"
