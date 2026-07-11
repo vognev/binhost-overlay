@@ -84,7 +84,7 @@ multilib_src_configure() {
 	if tc-is-cross-compiler; then
 		gi_wrap_ir_scanner "/usr/bin/g-ir-scanner"
 
-		export PATH="${T}/bin:${PATH}"
+		export PATH="${T}/shims:${PATH}"
 
 		emesonargs+=(
 			-Dgi_cross_use_prebuilt_gi=true

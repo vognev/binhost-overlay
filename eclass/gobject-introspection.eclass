@@ -9,8 +9,10 @@ case ${EAPI} in
 	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
 
+inherit sysroot
+
 gi_cross_fake_ldd() {
-    mkdir -p "${T}/bin"
+    mkdir -p "${T}/shims"
 
     install -m0755 /dev/stdin "${T}/sysroot-fake-ldd" <<-EOF
 		#!/bin/sh
@@ -47,14 +49,14 @@ EOF
 gi_wrap_ir_scanner() {
     local g_ir_scanner="${1}"
 
-	mkdir -p "${T}/bin"
+    mkdir -p "${T}/shims"
 
-    if [ -f "${T}/bin/g-ir-scanner" ]; then
-        echo "${T}/bin/g-ir-scanner"
+    if [ -f "${T}/shims/g-ir-scanner" ]; then
+        echo "${T}/shims/g-ir-scanner"
         return 0
     fi
 
-    install -m0755 /dev/stdin "${T}/bin/g-ir-scanner" <<-EOF
+    install -m0755 /dev/stdin "${T}/shims/g-ir-scanner" <<-EOF
 		#!/bin/sh
 		unset LD_LIBRARY_PATH
 
@@ -65,45 +67,77 @@ gi_wrap_ir_scanner() {
 		exec "${g_ir_scanner}" --use-ldd-wrapper="$(gi_cross_fake_ldd)" --use-binary-wrapper="$(sysroot_make_run_prefixed)" "\$@"
 EOF
 
-    echo "${T}/bin/g-ir-scanner"
+    echo "${T}/shims/g-ir-scanner"
 }
 
 gi_wrap_ir_compiler() {
 	local g_ir_compiler="${1}"
 
-	mkdir -p "${T}/bin"
+	mkdir -p "${T}/shims"
 
-    if [ -f "${T}/bin/g-ir-compiler" ]; then
-        echo "${T}/bin/g-ir-compiler"
+    if [ -f "${T}/shims/g-ir-compiler" ]; then
+        echo "${T}/shims/g-ir-compiler"
         return 0
     fi
 
-    install -m0755 /dev/stdin "${T}/bin/g-ir-compiler" <<-EOF
+    install -m0755 /dev/stdin "${T}/shims/g-ir-compiler" <<-EOF
 		#!/bin/sh
 		unset LD_LIBRARY_PATH
 
-		exec "${g_ir_compiler}" "$@"
+		exec "${g_ir_compiler}" "\$@"
 EOF
 
-    echo "${T}/bin/g-ir-compiler"
+    echo "${T}/shims/g-ir-compiler"
 }
 
 gi_wrap_ir_generate() {
     local g_ir_generate="${1}"
 
-	mkdir -p "${T}/bin"
+	mkdir -p "${T}/shims"
 
-    if [ -f "${T}/bin/g-ir-generate" ]; then
-        echo "${T}/bin/g-ir-generate"
+    if [ -f "${T}/shims/g-ir-generate" ]; then
+        echo "${T}/shims/g-ir-generate"
         return 0
     fi
 
-    install -m0755 /dev/stdin "${T}/bin/g-ir-generate" <<-EOF
+    install -m0755 /dev/stdin "${T}/shims/g-ir-generate" <<-EOF
 		#!/bin/sh
 		unset LD_LIBRARY_PATH
 
-		exec "${g_ir_generate}" "$@"
+		exec "${g_ir_generate}" "\$@"
 EOF
 
-    echo "${T}/bin/g-ir-generate"
+    echo "${T}/shims/g-ir-generate"
+}
+
+gi_shim_python() {
+    mkdir -p "${T}/shims"
+
+    install -m0755 /dev/stdin "${T}/shims/${EPYTHON}" <<-EOF
+		#!/bin/sh
+
+		SYSROOT_RUN_PREFIXED="$(sysroot_make_run_prefixed)"
+
+		exec "\${SYSROOT_RUN_PREFIXED}" "${ESYSROOT}/usr/bin/${EPYTHON}" "\${@}"
+EOF
+
+    echo "${T}/shims/${EPYTHON}"
+}
+
+
+gi_cross_meson_ini() {
+	local scanner_path=$(gi_wrap_ir_scanner "/usr/bin/g-ir-scanner")
+	local compiler_path=$(gi_wrap_ir_compiler "/usr/bin/g-ir-compiler")
+	local generate_path=$(gi_wrap_ir_generate "/usr/bin/g-ir-generate")
+	local python_path=$(gi_shim_python)
+
+	cat > "${T}/gobject-introspection.${CHOST}.${ABI}.ini" <<-EOF
+		[binaries]
+		g-ir-scanner = '${scanner_path}'
+		g-ir-compiler = '${compiler_path}'
+		g-ir-generate = '${generate_path}'
+		g-ir-python3 = '${python_path}'
+	EOF
+
+	echo "${T}/gobject-introspection.${CHOST}.${ABI}.ini"
 }

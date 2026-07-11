@@ -313,7 +313,7 @@ multilib_src_configure() {
 			local g_ir_compiler_path=$(gi_wrap_ir_compiler "${INTROSPECTION_CBUILD_PREFIX}/usr/bin/g-ir-compiler")
 			local g_ir_generate_path=$(gi_wrap_ir_generate "${INTROSPECTION_CBUILD_PREFIX}/usr/bin/g-ir-generate")
 
-			export PATH="${T}/bin:${PATH}"
+			export PATH="${T}/shims:${PATH}"
 
 			emesonargs+=(
 				-Dgi_cross_use_prebuilt_gi=true

@@ -1,0 +1,12 @@
+--- a/meson.build	2026-02-13 00:14:41.000000000 +0200
++++ b/meson.build	2026-07-11 11:07:04.809051015 +0300
+@@ -296,7 +296,8 @@
+ jansson_msg = 'no'
+ if jansson_dep.found()
+   jansson_libdir = jansson_dep.get_variable(pkgconfig: 'libdir')
+-  res = run_command(find_program('eu-readelf', 'readelf'), '-d', join_paths(jansson_libdir, 'libjansson.so'), check: false)
++  jansson_sysroot = meson.is_cross_build() ? meson.get_external_property('sys_root', '') : ''
++  res = run_command(find_program('eu-readelf', 'readelf'), '-d', jansson_sysroot + join_paths(jansson_libdir, 'libjansson.so'), check: false)
+   jansson_soname = ''
+   foreach line: res.stdout().split('\n')
+     if line.strip().contains('SONAME')

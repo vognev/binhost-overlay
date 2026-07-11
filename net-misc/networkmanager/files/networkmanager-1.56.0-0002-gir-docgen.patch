@@ -1,0 +1,24 @@
+diff '--color=auto' -ru /root/NetworkManager-1.56.0/src/libnm-client-impl/meson.build work/NetworkManager-1.56.0/src/libnm-client-impl/meson.build
+--- a/src/libnm-client-impl/meson.build	2026-02-13 00:14:41.000000000 +0200
++++ b/src/libnm-client-impl/meson.build	2026-07-11 12:56:01.942053433 +0300
+@@ -181,6 +181,11 @@
+   gen_infos_cmd = files(source_root / 'tools' / 'generate-docs-nm-property-infos.py')
+   gen_gir_cmd = files(source_root / 'tools' / 'generate-docs-nm-settings-docs-gir.py')
+ 
++  gir_python_path = find_program('g-ir-python3', native: false, required: false)
++  if not gir_python_path.found()
++    gir_python_path = python_path
++  endif
++
+   names = [ 'dbus', 'nmcli', 'keyfile' ]
+   if enable_ifcfg_rh
+     names += [ 'ifcfg-rh' ]
+@@ -207,7 +212,7 @@
+         'env',
+         'GI_TYPELIB_PATH=' + gi_typelib_path,
+         'LD_LIBRARY_PATH=' + ld_library_path,
+-        python_path,
++        gir_python_path,
+         gen_gir_cmd,
+         '--gir', libnm_gir[0],
+         '--output', '@OUTPUT@',
