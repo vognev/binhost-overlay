@@ -122,18 +122,6 @@ multilib_src_configure() {
 		)
 	fi
 
-	if tc-is-cross-compiler; then
-		local -a my_rust_args=(
-			"-C" "link-arg=--sysroot=${ESYSROOT}"
-			"-C" "link-arg=--rtlib=compiler-rt"
-		)
-
-		emesonargs+=(
-			-Drust_args="$(printf '%s\n' "${my_rust_args[@]}")" \
-			-Drust_link_args="-Wl,--sysroot=${ESYSROOT} -Wl,--rtlib=compiler-rt"
-		)
-	fi
-
 	cargo_env meson_src_configure
 }
 

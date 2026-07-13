@@ -123,6 +123,7 @@ BDEPEND="
 		app-text/docbook-xml-dtd:4.1.2
 	)
 	introspection? (
+		dev-libs/gobject-introspection
 		dev-lang/perl
 		dev-libs/libxslt
 	)
@@ -133,10 +134,14 @@ BDEPEND="
 			dev-python/pygobject:3[${PYTHON_USEDEP}]')
 	)
 "
+PATCHES=(
+    "${FILESDIR}/${P}-0001-cross-janson.patch"
+	"${FILESDIR}/${P}-0002-gir-docgen.patch"
+)
 
 python_check_deps() {
 	if use introspection; then
-		python_has_version "dev-python/pygobject:3[${PYTHON_USEDEP}]" || return
+		python_has_version -d "dev-python/pygobject:3[${PYTHON_USEDEP}]" || return
 	fi
 	if use test; then
 		python_has_version "dev-python/dbus-python[${PYTHON_USEDEP}]" &&
@@ -165,13 +170,6 @@ src_prepare() {
 
 	default
 	use vala && vala_setup
-
-	# Створюємо масив знайдених патчів
-	local patches=( "${FILESDIR}/${P}"-*.patch )
-
-	if [[ -f "${patches[0]}" ]]; then
-		eapply "${patches[@]}" || die "Unable to apply patches: ${patches[*]}"
-	fi
 
 	sed -i \
 		-e 's#/usr/bin/sed#/bin/sed#' \
