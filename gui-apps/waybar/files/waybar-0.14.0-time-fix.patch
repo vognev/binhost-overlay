@@ -1,0 +1,20 @@
+--- a/src/modules/simpleclock.cpp	2025-08-08 10:15:22.000000000 +0300
++++ b/src/modules/simpleclock.cpp	2026-07-13 13:11:56.518436402 +0300
+@@ -1,6 +1,7 @@
+ #include "modules/simpleclock.hpp"
+ 
+ #include <time.h>
++#include <ctime>
+ 
+ waybar::modules::Clock::Clock(const std::string& id, const Json::Value& config)
+     : ALabel(config, "clock", id, "{:%H:%M}", 60) {
+@@ -17,7 +18,8 @@
+ auto waybar::modules::Clock::update() -> void {
+   tzset();  // Update timezone information
+   auto now = std::chrono::system_clock::now();
+-  auto localtime = fmt::localtime(std::chrono::system_clock::to_time_t(now));
++  time_t timet_now = std::chrono::system_clock::to_time_t(now);
++  auto localtime = *std::localtime(&timet_now);
+   auto text = fmt::format(fmt::runtime(format_), localtime);
+   label_.set_markup(text);
+ 

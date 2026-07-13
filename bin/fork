@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+set -e
+
+LOCAL_OVERLAY="${LOCAL_OVERLAY:-/var/db/repos/binhost-overlay}"
+
+if [[ -z "$1" ]]; then
+    echo "Usage: $0 <category>/<package>-<version>"
+    echo "Example: $0 gnome-base/librsvg-2.62.2-r1"
+    exit 1
+fi
+
+TARGET="$1"
+PKG_WITH_VER="${TARGET##*/}"
+
+GENTOO_REPO=$(portageq get_repo_path / gentoo)
+
+if [[ -z "${GENTOO_REPO}" || ! -d "${GENTOO_REPO}" ]]; then
+    echo "Error: Could not find the main Gentoo tree via portageq."
+    exit 1
+fi
+
+PN=$(portageq pms_query atom_pfn "=${TARGET}" | awk '{print $1}' | sed 's/-[0-9].*//')
+
+SRC_DIR="${GENTOO_REPO}/${PN}"
+DST_DIR="${LOCAL_OVERLAY}/${PN}"
+
+if [[ ! -d "${SRC_DIR}" ]]; then
+    echo "Error: Upstream package not found in ${SRC_DIR}"
+    exit 1
+fi
+
+if [[ ! -f "${SRC_DIR}/${PKG_WITH_VER}.ebuild" ]]; then
+    echo "Error: Specific ebuild ${PKG_WITH_VER}.ebuild not found upstream."
+    exit 1
+fi
+
+echo "Package:  ${PN}"
+echo "Version:  ${PKG_WITH_VER##*$PN-}"
+echo "----------------------------------------"
+
+# Створюємо структуру в локальному оверлеї
+mkdir -p "${DST_DIR}/files"
+
+# Копіюємо конкретний ебілд
+echo "Copying ebuild..."
+cp -n "${SRC_DIR}/${PKG_WITH_VER}.ebuild" "${DST_DIR}/"
+
+# Копіюємо допоміжні патчі/файли, якщо вони є
+if [[ -d "${SRC_DIR}/files" && "$(ls -A "${SRC_DIR}/files")" ]]; then
+    echo "Copying auxiliary files (patches/files)..."
+    cp -r "${SRC_DIR}/files/"* "${DST_DIR}/files/"
+fi
+
+cd "${DST_DIR}"
+
+echo "Generating new Manifest..."
+ebuild "${PKG_WITH_VER}.ebuild" manifest
+
+echo "----------------------------------------"
+echo "Success! Package forked to: ${DST_DIR}"
+echo "You can now edit ${DST_DIR}/${PKG_WITH_VER}.ebuild"
