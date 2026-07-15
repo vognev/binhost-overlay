@@ -122,6 +122,11 @@ multilib_src_configure() {
 		)
 	fi
 
+	if tc-is-cross-compiler; then
+		export PKG_CONFIG_LIBDIR="${ESYSROOT}/usr/$(get_libdir)/pkgconfig:${ESYSROOT}/usr/share/pkgconfig:${T}/pkgconfig"
+		export PKG_CONFIG_PATH="${ESYSROOT}/usr/$(get_libdir)/pkgconfig:${ESYSROOT}/usr/share/pkgconfig:${T}/pkgconfig"
+	fi
+
 	cargo_env meson_src_configure
 }
 

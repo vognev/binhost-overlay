@@ -83,6 +83,9 @@ multilib_src_configure() {
 	)
 
 	if tc-is-cross-compiler; then
+		export PKG_CONFIG_LIBDIR="${ESYSROOT}/usr/$(get_libdir)/pkgconfig:${ESYSROOT}/usr/share/pkgconfig"
+		export PKG_CONFIG_PATH="${ESYSROOT}/usr/$(get_libdir)/pkgconfig:${ESYSROOT}/usr/share/pkgconfig"
+
 		if use introspection; then
 			emesonargs+=(
 				--cross-file="$(gi_cross_meson_ini)"

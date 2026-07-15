@@ -86,8 +86,11 @@ multilib_src_configure() {
 
 		export PATH="${T}/shims:${PATH}"
 
+		export PKG_CONFIG_LIBDIR="${ESYSROOT}/usr/$(get_libdir)/pkgconfig:${ESYSROOT}/usr/share/pkgconfig"
+
 		emesonargs+=(
 			-Dgi_cross_use_prebuilt_gi=true
+			-Dgi_cross_pkgconfig_sysroot_path="${ESYSROOT}"
 		)
 	fi
 

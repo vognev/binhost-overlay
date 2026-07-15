@@ -341,10 +341,14 @@ multilib_src_configure() {
 		has_version -b llvm-core/clang:${LLVM_MAJOR} ||
 			die "llvm-core/clang:${LLVM_MAJOR} is required on the build host."
 		local tools_bin=${BROOT}/usr/lib/llvm/${LLVM_MAJOR}/bin
+
+		local build_cflags="${BUILD_CFLAGS:--O2 -pipe}"
+		local build_cxxflags="${BUILD_CXXFLAGS:--O2 -pipe}"
+
 		mycmakeargs+=(
 			-DLLVM_TOOLS_BINARY_DIR="${tools_bin}"
 			-DCLANG_TABLEGEN="${tools_bin}"/clang-tblgen
-			-DCROSS_TOOLCHAIN_FLAGS_NATIVE="-DCMAKE_C_COMPILER=${tools_bin}/clang;-DCMAKE_CXX_COMPILER=${tools_bin}/clang++"
+			-DCROSS_TOOLCHAIN_FLAGS_NATIVE="-DCMAKE_C_COMPILER=${tools_bin}/clang;-DCMAKE_CXX_COMPILER=${tools_bin}/clang++;-DCMAKE_C_FLAGS=${build_cflags};-DCMAKE_CXX_FLAGS=${build_cxxflags}"
 		)
 	fi
 

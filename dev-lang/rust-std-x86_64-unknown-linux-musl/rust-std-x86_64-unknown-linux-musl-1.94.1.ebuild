@@ -3,9 +3,9 @@ EAPI=8
 CRATES="
 	addr2line-0.25.1
 	adler2-2.0.1
-	allocator-api2-0.2.18
 	cc-1.2.0
 	cfg-if-1.0.4
+	compiler_builtins-0.1.160
 	dlmalloc-0.2.11
 	foldhash-0.2.0
 	fortanix-sgx-abi-0.6.1
@@ -23,9 +23,10 @@ CRATES="
 	rand-0.9.2
 	rand_core-0.9.3
 	rand_xorshift-0.4.0
-	rustc-demangle-0.1.27
+	rustc-demangle-0.1.26
 	rustc-literal-escaper-0.0.7
 	shlex-1.3.0
+	std_detect-0.1.5
 	unwinding-0.2.8
 	vex-sdk-0.27.1
 	wasi-0.11.1+wasi-snapshot-preview1

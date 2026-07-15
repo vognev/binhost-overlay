@@ -1,0 +1,10 @@
+--- a/tools/profiler/rust-api/build.rs	2026-07-15 19:03:53.993390799 +0300
++++ b/tools/profiler/rust-api/build.rs	2026-07-15 19:06:17.322427642 +0300
+@@ -91,6 +91,7 @@
+         .blocklist_type("std::__1::basic_string_view.*")
+         .opaque_type("std::__1::basic_string_view.*")
+         .blocklist_type(".*basic_string___self_view.*")
++        .opaque_type(".*__allocation_result.*")
+         // Converting std::string to an opaque type makes some platforms build
+         // successfully. Otherwise, it fails to build because MarkerSchema has
+         // some std::strings as its fields.
