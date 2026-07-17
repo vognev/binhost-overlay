@@ -22,7 +22,7 @@ gi_cross_fake_ldd() {
 		    exit 0
 		fi
 
-		SO_NAMES=\$(llvm-readelf -d "\$@" | grep NEEDED | sed -r 's/.*\[(.*)\].*/\1/')
+		SO_NAMES=\$(readelf -d "\$@" | grep NEEDED | sed -r 's/.*\[(.*)\].*/\1/')
 
 		for so in \${SO_NAMES}; do
 		    FOUND_PATH=""
