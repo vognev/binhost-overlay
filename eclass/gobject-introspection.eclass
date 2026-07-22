@@ -58,7 +58,6 @@ gi_wrap_ir_scanner() {
 
     install -m0755 /dev/stdin "${T}/shims/g-ir-scanner" <<-EOF
 		#!/bin/sh
-		unset LD_LIBRARY_PATH
 
 		export CC=$(tc-getCC)
 		export CXX=$(tc-getCXX)

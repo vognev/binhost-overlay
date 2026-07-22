@@ -535,6 +535,11 @@ pkg_setup() {
 		rust_pkg_setup
 		python-any-r1_pkg_setup
 
+		if tc-is-cross-compiler; then
+			llvm_prepend_path -b "${LLVM_SLOT}"
+			export RUSTC="${CBUILD}-rustc"
+		fi
+
 		# Avoid PGO profiling problems due to enviroment leakage
 		# These should *always* be cleaned up anyway
 		unset \
@@ -815,6 +820,9 @@ src_configure() {
 	# *-pc-linux-musl aliases to rustc target names.
 	local configure_target="${CHOST}"
 	if [[ ${CHOST} == *-pc-linux-musl ]] ; then
+		configure_target="${CHOST/-pc-/-unknown-}"
+	fi
+	if [[ ${CHOST} == *-pc-linux-gnu ]] ; then
 		configure_target="${CHOST/-pc-/-unknown-}"
 	fi
 

@@ -2,7 +2,7 @@
 
 set -e
 
-CHOST="${CHOST:-x86_64-pc-linux-musl}"
+CHOST="${CHOST:-x86_64-pc-linux-gnu}"
 
 TARGET_PKG="$1"
 
@@ -17,4 +17,5 @@ fi
 
 "${CHOST}-emerge" -v1 --onlydeps --with-bdeps=y "${TARGET_PKG}"
 
+FEATURES="-gtbinpkg" \
 "${CHOST}-emerge" -v1 --buildpkgonly --usepkg=n "${TARGET_PKG}"

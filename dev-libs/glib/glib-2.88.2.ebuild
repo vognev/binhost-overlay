@@ -314,6 +314,7 @@ multilib_src_configure() {
 			local g_ir_generate_path=$(gi_wrap_ir_generate "${INTROSPECTION_CBUILD_PREFIX}/usr/bin/g-ir-generate")
 
 			export PATH="${T}/shims:${PATH}"
+			export LD_LIBRARY_PATH="${INTROSPECTION_CBUILD_PREFIX}/usr/$(get_libdir):${LD_LIBRARY_PATH}"
 
 			emesonargs+=(
 				-Dgi_cross_use_prebuilt_gi=true
@@ -365,17 +366,20 @@ multilib_src_configure() {
 		# always non-empty while still pointing only at our intended dirs.
 		local -x PKG_CONFIG_PATH="${PKG_CONFIG_LIBDIR}"
 
-		# Add the paths to the built glib libraries to the library path so that gobject-introspection can load them
-		local gliblib
-		for gliblib in glib gobject gthread gmodule gio girepository; do
-			export LD_LIBRARY_PATH="${BUILD_DIR}/${gliblib}:${LD_LIBRARY_PATH}"
-		done
+		if ! tc-is-cross-compiler; then
+			# Add the paths to the built glib libraries to the library path so that gobject-introspection can load them
+			local gliblib
+			for gliblib in glib gobject gthread gmodule gio girepository; do
+				export LD_LIBRARY_PATH="${BUILD_DIR}/${gliblib}:${LD_LIBRARY_PATH}"
+			done
 
-		# Add the path to introspection libraries so that glib can call gir utilities
-		export LD_LIBRARY_PATH="${INTROSPECTION_LIB_DIR}:${LD_LIBRARY_PATH}"
-
-		# Add the paths to the gobject-introspection python modules to python path so they can be imported
-		export PYTHONPATH="${INTROSPECTION_LIB_DIR}/gobject-introspection:${PYTHONPATH}"
+			# Add the path to introspection libraries so that glib can call gir utilities
+			export LD_LIBRARY_PATH="${INTROSPECTION_LIB_DIR}:${LD_LIBRARY_PATH}"
+			# Add the paths to the gobject-introspection python modules to python path so they can be imported
+			export PYTHONPATH="${INTROSPECTION_LIB_DIR}/gobject-introspection:${PYTHONPATH}"
+		else
+			export PYTHONPATH="${INTROSPECTION_CBUILD_PREFIX}/usr/$(get_libdir)/gobject-introspection:${PYTHONPATH}"
+		fi
 	fi # _need_bootstrap_gi
 
 	# TODO: Can this be cleaned up now we have -Dglib_debug? (bug #946485)

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+REAL_RUSTC="@@REAL_RUSTC@@"
+
+export RUST_TARGET_PATH="@@RUST_TARGET_PATH@@${RUST_TARGET_PATH:+:${RUST_TARGET_PATH}}"
+
+if [[ " $* " == *" -vV "* || " $* " == *" --version --verbose "* ]]; then
+    "$REAL_RUSTC" "$@" | sed 's/host: x86_64-unknown-linux-gnu/host: @@FAKE_TARGET_TRIPLET@@/'
+    exit $?
+fi
+
+if [[ " $* " == *"--print target-list"* ]]; then
+    echo "@@FAKE_TARGET_TRIPLET@@"
+    "$REAL_RUSTC" "$@"
+    exit $?
+fi
+
+exec "$REAL_RUSTC" "$@"
