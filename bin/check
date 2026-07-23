@@ -1,0 +1,3 @@
+#!/bin/sh
+
+shellcheck -s bash -e SC1091 -e SC2034 "$@"

@@ -66,12 +66,11 @@ multilib_src_configure() {
 		-Dpython="${EPYTHON}"
 	)
 
-	if tc-is-cross-compiler; then
-		if use introspection; then
-			emesonargs+=(
-				--cross-file="$(gi_cross_meson_ini)"
-			)
-		fi
+	if tc-is-cross-compiler && use introspection; then
+		gi_pkg-config_setup
+		emesonargs+=(
+			--cross-file="$(gi_meson_cross_file)"
+		)
 	fi
 
 	meson_src_configure

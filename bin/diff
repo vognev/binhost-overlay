@@ -21,7 +21,7 @@ for item in "$@"; do
         gentoo_ebuild="/var/db/repos/gentoo/${rel_path}"
         
         if [[ -f "${gentoo_ebuild}" ]]; then
-            diff_output=$(diff --color=always -u "${gentoo_ebuild}" "${my_ebuild}")
+            diff_output=$(diff -p --color=always -u "${gentoo_ebuild}" "${my_ebuild}")
             if [[ -n "${diff_output}" ]]; then
                 echo -e "\n\e[1;31m=== Changes in: ${rel_path} ===\e[0m"
                 if command -v colordiff &> /dev/null; then

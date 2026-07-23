@@ -59,8 +59,9 @@ src_configure() {
 		export PATH="${T}/shims:${PATH}"
 
 		if use introspection; then
+			gi_pkg-config_setup
 			emesonargs+=(
-				--cross-file="$(gi_cross_meson_ini)"
+				--cross-file="$(gi_meson_cross_file)"
 			)
 		fi
 	fi

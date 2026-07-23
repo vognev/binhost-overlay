@@ -309,14 +309,11 @@ multilib_src_configure() {
 		emesonargs+=( -Dreadline=none )
 	fi
 
-	if tc-is-cross-compiler; then
-		export PATH="${T}/shims:${PATH}"
-
-		local python_path=$(gi_shim_python)
-
-		if use introspection; then
-			emesonargs+=( --cross-file="$(gi_cross_meson_ini)" )
-		fi
+	if tc-is-cross-compiler && use introspection; then
+		gi_pkg-config_setup
+		emesonargs+=(
+			--cross-file="$(gi_meson_cross_file)"
+		)
 	fi
 
 	# Same hack as net-dialup/pptpd to get proper plugin dir for ppp, bug #519986

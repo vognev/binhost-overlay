@@ -4,18 +4,9 @@ set -e
 
 CHOST="${CHOST:-x86_64-pc-linux-gnu}"
 
-TARGET_PKG="$1"
+# todo: depclean all except bdeps of $@
 
-if [ -z "${TARGET_PKG}" ]; then
-    echo "Error: specify a package to build (e.g., $0 net-misc/networkmanager)"
-    exit 1
-fi
-
-# todo: depclean all except bdeps of $1
-
-"${CHOST}-emerge" --depclean --with-bdeps=y
-
-"${CHOST}-emerge" -v1 --onlydeps --with-bdeps=y "${TARGET_PKG}"
+"${CHOST}-emerge" -v1 --onlydeps --with-bdeps=y "$@"
 
 FEATURES="-gtbinpkg" \
-"${CHOST}-emerge" -v1 --buildpkgonly --usepkg=n "${TARGET_PKG}"
+    "${CHOST}-emerge" -v1 --buildpkgonly --usepkg=n "$@"

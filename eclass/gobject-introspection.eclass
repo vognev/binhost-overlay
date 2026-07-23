@@ -9,7 +9,7 @@ case ${EAPI} in
 	*) die "${ECLASS}: EAPI ${EAPI:-0} not supported" ;;
 esac
 
-inherit sysroot
+inherit sysroot cross-wrappers
 
 gi_cross_fake_ldd() {
     mkdir -p "${T}/shims"
@@ -65,7 +65,7 @@ gi_wrap_ir_scanner() {
 
 		exec "${g_ir_scanner}" --use-ldd-wrapper="$(gi_cross_fake_ldd)" \
 		    --use-binary-wrapper="$(sysroot_make_run_prefixed)" \
-			--add-include-path="${ESYSROOT}/usr/share/gir-1.0" \
+			--add-include-path="\${GI_GIR_PATH:-${ESYSROOT}/usr/share/gir-1.0}" \
 			"\$@"
 EOF
 
@@ -126,14 +126,21 @@ EOF
     echo "${T}/shims/${EPYTHON}"
 }
 
+gi_meson_cross_file() {
+	local scanner_bin compiler_bin generate_bin
+	scanner_bin=$(type -P g-ir-scanner || echo /usr/bin/g-ir-scanner)
+	compiler_bin=$(type -P g-ir-compiler || echo /usr/bin/g-ir-compiler)
+	generate_bin=$(type -P g-ir-generate || echo /usr/bin/g-ir-generate)
 
-gi_cross_meson_ini() {
-	local scanner_path=$(gi_wrap_ir_scanner "/usr/bin/g-ir-scanner")
-	local compiler_path=$(gi_wrap_ir_compiler "/usr/bin/g-ir-compiler")
-	local generate_path=$(gi_wrap_ir_generate "/usr/bin/g-ir-generate")
-	local python_path=$(gi_shim_python)
+	local scanner_path compiler_path generate_path python_path
+	scanner_path="$(gi_wrap_ir_scanner "${scanner_bin}")"
+	compiler_path="$(gi_wrap_ir_compiler "${compiler_bin}")"
+	generate_path="$(gi_wrap_ir_generate "${generate_bin}")"
+	python_path="$(gi_shim_python)"
 
-	cat > "${T}/gobject-introspection.${CHOST}.${ABI}.ini" <<-EOF
+	local ini_file="${T}/gobject-introspection.${CHOST}.${ABI:-default}.ini"
+
+	cat > "${ini_file}" <<-EOF || die
 		[binaries]
 		g-ir-scanner = '${scanner_path}'
 		g-ir-compiler = '${compiler_path}'
@@ -141,5 +148,20 @@ gi_cross_meson_ini() {
 		g-ir-python3 = '${python_path}'
 	EOF
 
-	echo "${T}/gobject-introspection.${CHOST}.${ABI}.ini"
+	echo "${ini_file}"
+}
+
+# @FUNCTION: gi_pkg-config_setup
+# @DESCRIPTION:
+# One-stop setup for GObject Introspection cross-compilation.
+gi_pkg-config_setup() {
+	tc-is-cross-compiler || return 0
+
+	export GI_GIR_PATH="${ESYSROOT:-/usr/${CHOST}}/usr/share/gir-1.0"
+
+	cross_pkg_config_setup
+
+	cross_pkg_config_define "g_ir_scanner"  "$(gi_wrap_ir_scanner /usr/bin/g-ir-scanner)"
+	cross_pkg_config_define "g_ir_compiler" "$(gi_wrap_ir_compiler /usr/bin/g-ir-compiler)"
+	cross_pkg_config_define "g_ir_generate" "$(gi_wrap_ir_generate /usr/bin/g-ir-generate)"
 }

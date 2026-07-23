@@ -11,7 +11,7 @@ CRATES="
 RUST_MIN_VER="1.92.0"
 RUST_MULTILIB=1
 
-inherit cargo gnome2 meson-multilib python-any-r1 rust-toolchain vala gobject-introspection
+inherit cargo gnome2 meson-multilib python-any-r1 rust-toolchain vala toolchain-funcs gobject-introspection
 
 DESCRIPTION="Scalable Vector Graphics (SVG) rendering library"
 HOMEPAGE="https://wiki.gnome.org/Projects/LibRsvg https://gitlab.gnome.org/GNOME/librsvg"
@@ -45,10 +45,7 @@ RDEPEND="
 
 	introspection? ( >=dev-libs/gobject-introspection-1.82.0-r2:= )
 "
-DEPEND="
-	${RDEPEND}
-	vala? ( $(vala_depend) )
-"
+DEPEND="${RDEPEND}"
 BDEPEND="
 	>=dev-util/cargo-c-0.10.10
 	x11-libs/gdk-pixbuf
@@ -56,6 +53,7 @@ BDEPEND="
 	$(python_gen_any_dep 'dev-python/docutils[${PYTHON_USEDEP}]')
 	gtk-doc? ( dev-util/gi-docgen )
 	virtual/pkgconfig
+	vala? ( $(vala_depend) )
 "
 
 QA_FLAGS_IGNORED="
@@ -65,7 +63,7 @@ QA_FLAGS_IGNORED="
 "
 
 PATCHES=(
-	"${FILESDIR}"/${PN}-2.60.0-libxml2-2.15.0-tests.patch
+	"${FILESDIR}/${PN}-2.60.0-libxml2-2.15.0-tests.patch"
 )
 
 pkg_setup() {
@@ -96,11 +94,11 @@ multilib_src_configure() {
 	if tc-is-cross-compiler && use vala; then
 		local esysroot_vapigen="${ESYSROOT}/usr/lib/pkgconfig/vapigen.pc"
 
-		if ! -f "${esysroot_vapigen}"; then
+		if [ ! -f "${esysroot_vapigen}" ]; then
 			for v in $(vala_api_versions); do
 				local esysroot_vapigen_version="${ESYSROOT}/usr/lib/pkgconfig/vapigen-${v}.pc"
 
-				if [[ -f "${esysroot_vapigen_version}" ]]; then
+				if [ -f "${esysroot_vapigen_version}" ]; then
 					einfo "Found configuration file: vapigen-${v}.pc. Copying..."
 					cp "${esysroot_vapigen_version}" "${T}/pkgconfig/vapigen.pc"
 					break
@@ -117,14 +115,10 @@ multilib_src_configure() {
 	fi
 
 	if tc-is-cross-compiler && use introspection; then
+		gi_pkg-config_setup
 		emesonargs+=(
-			--cross-file="$(gi_cross_meson_ini)"
+			--cross-file="$(gi_meson_cross_file)"
 		)
-	fi
-
-	if tc-is-cross-compiler; then
-		export PKG_CONFIG_LIBDIR="${ESYSROOT}/usr/$(get_libdir)/pkgconfig:${ESYSROOT}/usr/share/pkgconfig:${T}/pkgconfig"
-		export PKG_CONFIG_PATH="${ESYSROOT}/usr/$(get_libdir)/pkgconfig:${ESYSROOT}/usr/share/pkgconfig:${T}/pkgconfig"
 	fi
 
 	cargo_env meson_src_configure
