@@ -13,7 +13,7 @@ SRC_URI="https://github.com/heyjuvi/avizo/archive/refs/tags/${PV}.tar.gz -> ${P}
 
 LICENSE="GPL-3"
 SLOT="0"
-KEYWORDS="~amd64"
+KEYWORDS="amd64"
 
 RDEPEND="
 	gui-libs/gtk-layer-shell[introspection,vala]
